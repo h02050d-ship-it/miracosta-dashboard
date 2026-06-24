@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ミラコスタ 空室チェック ダッシュボード</title>
+<style>
+  :root{
+    --navy:#1b3a5b; --gold:#c9a24b; --sea:#2e7d9a; --bg:#f4f7fa;
+    --card:#fff; --line:#dde6ee; --ok:#1e8e5a; --warn:#b5532a;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    background:var(--bg);color:var(--navy);line-height:1.6;padding-bottom:60px;}
+  header{background:linear-gradient(135deg,var(--navy),var(--sea));color:#fff;padding:20px 16px;text-align:center;}
+  header h1{margin:0;font-size:20px;letter-spacing:.04em;}
+  header p{margin:6px 0 0;font-size:12px;opacity:.85;}
+  .wrap{max-width:640px;margin:0 auto;padding:16px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px;
+    box-shadow:0 2px 8px rgba(27,58,91,.05);}
+  .card h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;color:#fff;}
+  .bA{background:var(--gold);} .bB{background:var(--sea);}
+  label{font-size:13px;font-weight:600;display:block;margin:10px 0 4px;}
+  input[type=date],select{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:16px;
+    background:#fff;color:var(--navy);}
+  .row{display:flex;gap:10px;}
+  .row>div{flex:1;}
+  .btn{display:block;width:100%;text-align:center;text-decoration:none;font-weight:700;font-size:15px;
+    padding:14px;border-radius:12px;margin-top:10px;color:#fff;border:none;cursor:pointer;}
+  .btnA{background:var(--gold);} .btnB{background:var(--sea);}
+  .btn:active{opacity:.8;}
+  .btn-sub{background:#eef3f8;color:var(--navy);font-weight:600;font-size:13px;padding:11px;}
+  .note{font-size:12px;color:#5a6b7b;margin-top:8px;}
+  .warnbox{background:#fdf3ee;border:1px solid #f0d4c4;color:var(--warn);font-size:12px;
+    padding:10px 12px;border-radius:10px;margin-top:10px;}
+  .times{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{background:#eef3f8;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:600;}
+  .links a{display:block;padding:10px 0;border-bottom:1px solid var(--line);text-decoration:none;color:var(--sea);font-weight:600;font-size:14px;}
+  .links a:last-child{border:none;}
+  .links small{display:block;color:#7a8a99;font-weight:400;font-size:11px;}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;}
+  th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;}
+  th{background:#eef3f8;font-weight:700;}
+  td.r{text-align:right;white-space:nowrap;}
+  .star{color:var(--gold);font-weight:700;}
+  details{margin-top:8px;}
+  summary{font-size:13px;font-weight:600;cursor:pointer;color:var(--sea);}
+  .kvs{font-size:12px;color:#3a4b5b;}
+  .kvs li{margin:3px 0;}
+  footer{text-align:center;font-size:11px;color:#9aa8b5;padding:20px;}
+  .ok{color:var(--ok);font-weight:700;}
+  .cancelinfo{font-size:13px;font-weight:600;padding:10px 12px;border-radius:10px;margin-top:10px;}
+  .c-free{background:#eaf6ef;color:var(--ok);border:1px solid #bfe3cd;}
+  .c-fee{background:#fdf3ee;color:var(--warn);border:1px solid #f0d4c4;}
+  .c-none{background:#eef3f8;color:#5a6b7b;}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏰 ミラコスタ 空室チェック</h1>
+  <p>通知が来たら → 日付を入れて → 1タップで予約画面へ</p>
+</header>
+
+<div class="wrap">
+
+  <!-- 日付入力 -->
+  <div class="card">
+    <h2>📅 宿泊日を入れる</h2>
+    <label>宿泊日（チェックイン）</label>
+    <input type="date" id="useDate">
+    <div class="row">
+      <div>
+        <label>泊数</label>
+        <select id="nights"><option>1</option><option>2</option><option>3</option></select>
+      </div>
+    </div>
+    <div id="cancelBox" class="cancelinfo c-none">宿泊日を入れると、キャンセル料の状況が出ます。</div>
+  </div>
+
+  <!-- パターンA -->
+  <div class="card">
+    <h2><span class="badge bA">A</span> ハーバービュー1室に家族6人</h2>
+    <p class="note">大人3＋4歳（子供料金でベッド）＋2歳・0歳（添い寝）を <b>ミラコスタ1室</b>に。<br>
+    定員4の部屋に6名収める本命プラン。</p>
+    <a class="btn btnA" id="lnkA" href="#" target="_blank" rel="noopener">▶ パターンA を今すぐ確認</a>
+    <p class="note">一覧に「ポルト・パラディーゾ・サイド ハーバービュー」（ハーバールーム/スーペリア4名）が出れば当たり＝ビリーブ視聴可。</p>
+    <details>
+      <summary>※「全員添い寝(大人3+子3添い寝)」版も試す</summary>
+      <a class="btn btn-sub" id="lnkA2" href="#" target="_blank" rel="noopener">大人3+子3(全員添い寝)で確認</a>
+      <p class="note">7/15テストで成立確認済みの組み合わせ。ただし定員4のHV部屋は添い寝2名までのため、本命Aが弾かれた時の代替確認用。</p>
+    </details>
+  </div>
+
+  <!-- パターンB -->
+  <div class="card">
+    <h2><span class="badge bB">B</span> 2室に分ける（取りやすい）</h2>
+    <p class="note">①ビリーブ視聴用ハーバービュー（大人2+子2添い寝） ＋ ②安い部屋（大人1+子1添い寝・ビュー不問）。<br>
+    4名対応で全HV部屋が候補になり <b>在庫が桁違いに多い＝取りやすい</b>。</p>
+    <a class="btn btnB" id="lnkB" href="#" target="_blank" rel="noopener">▶ B（2室同時）を確認</a>
+    <a class="btn btn-sub" id="lnkB1" href="#" target="_blank" rel="noopener">① ハーバービュー側（大人2+子2）</a>
+    <a class="btn btn-sub" id="lnkB2" href="#" target="_blank" rel="noopener">② 安い部屋（大人1+子1・指定なし）</a>
+    <div class="warnbox">⚠️ 2室同時URLは未検証。出なければ①②を個別に。両方同じ日に空いていれば成立。</div>
+  </div>
+
+  <!-- 全ホテル -->
+  <div class="card">
+    <h2>🔎 おまけ：全ホテル空き</h2>
+    <a class="btn btn-sub" id="lnkAll" href="#" target="_blank" rel="noopener">大人3+子3で全ホテル一覧</a>
+    <p class="note">ミラコスタ全滅でも他ホテルの空きをまとめて確認。</p>
+  </div>
+
+  <!-- 部屋データ -->
+  <div class="card">
+    <h2>🛏 ミラコスタ ハーバービュー部屋データ</h2>
+    <table>
+      <tr><th>部屋</th><th>定員</th><th>室数</th><th>1泊(1室)目安</th></tr>
+      <tr><td class="star">★ハーバールーム HV（本命）</td><td>4</td><td>3〜6</td><td class="r">15.2〜19.1万</td></tr>
+      <tr><td>スーペリア HV（4名版）</td><td>3/4</td><td>49(4名13)</td><td class="r">11.1〜15.0万</td></tr>
+      <tr><td>バルコニー HV</td><td>3</td><td>4</td><td class="r">16.2〜20.1万</td></tr>
+      <tr><td>テラス HV</td><td>2</td><td>5</td><td class="r">16.6〜20.5万</td></tr>
+    </table>
+    <details>
+      <summary>添い寝・定員ルール（なぜ4歳だけベッドか）</summary>
+      <ul class="kvs">
+        <li>レギュラーベッド1台＝添い寝1名 / ダブル1台＝添い寝2名</li>
+        <li>トランドル等は添い寝不可だが「子供料金で定員+1」は可</li>
+        <li>→ 4歳を子供料金でベッド利用にして定員4部屋を6名に。2歳・0歳は添い寝</li>
+        <li>トリプル/テラスはビュー不可or定員2でビリーブ不向き</li>
+      </ul>
+    </details>
+  </div>
+
+  <!-- 攻略情報 -->
+  <div class="card">
+    <h2>📖 予約攻略メモ</h2>
+    <ul class="kvs">
+      <li><b>解禁</b>：宿泊4ヶ月前の同日11:00（同日が無い月は翌月1日11:00）</li>
+      <li><b>無料キャンセル</b>：宿泊15日前 23:59まで</li>
+      <li><b>キャンセル料</b>：14〜8日前=1万/室、7〜2日前=2万/室、前日当日=3万/室</li>
+      <li><b>申込金</b>：3万/室（予約時カード決済・無料期間内は全額返金）</li>
+      <li><b>代理店在庫</b>：公式満室でも JTB/楽天/じゃらん に別在庫あり</li>
+    </ul>
+  </div>
+
+  <!-- 狙い目時間 -->
+  <div class="card">
+    <h2>⏰ キャンセルが出やすい狙い目</h2>
+    <div class="times">
+      <span class="chip">朝5時前後</span>
+      <span class="chip">11〜13時</span>
+      <span class="chip">22〜24時</span>
+      <span class="chip">宿泊15日前の夜23時台</span>
+      <span class="chip">月末・月水</span>
+    </div>
+    <p class="note">日付は幅を持たせるほど当たりやすい（平日を複数チェック）。</p>
+  </div>
+
+  <!-- 通知サービス -->
+  <div class="card">
+    <h2>🔔 監視はこれに任せる（自分で巡回しない）</h2>
+    <div class="links">
+      <a href="https://urtrip.jp/disneyhotel-push/" target="_blank" rel="noopener">Your Trip 空室通知を設定する
+        <small>無料・日付/部屋タイプ指定可・ブラウザ/アプリ通知（本命）</small></a>
+      <a href="https://x.com/MIRACOSTA_CHECK" target="_blank" rel="noopener">@MIRACOSTA_CHECK をフォロー＋🔔ON
+        <small>無料・条件指定不可だが公式系の取りこぼし保険に</small></a>
+    </div>
+    <div class="warnbox">自動巡回ツールはTDR規約（在庫の自動取得禁止）に触れるため使いません。監視は上の既製サービス、予約の確定（お金が発生）は必ず自分で。</div>
+  </div>
+
+</div>
+
+<footer>個人用 / ミラコスタ予約サポート — reserve.tokyodisneyresort.jp の公式検索を開くだけのツールです</footer>
+
+<script>
+  var BASE = "https://reserve.tokyodisneyresort.jp/hotel/list/?";
+  function ymd(v){ return v ? v.replace(/-/g,"") : ""; }
+
+  // childAgeBedInform を作る。children = [{age:"04", bed:"1"|"3"}, ...]  (1=ベッド利用,3=添い寝)
+  function ageBedCustom(children){
+    return children.map(function(c){ return c.age + "_" + c.bed; }).join("|") + "|";
+  }
+
+  function build(opts){
+    var p = new URLSearchParams();
+    p.set("showWay","");
+    p.set("roomsNum", opts.rooms);
+    p.set("adultNum", opts.adult);
+    p.set("childNum", opts.children ? opts.children.length : 0);
+    p.set("stayingDays", opts.nights);
+    p.set("useDate", opts.date);
+    p.set("cpListStr","");
+    p.set("childAgeBedInform", (opts.children && opts.children.length) ? ageBedCustom(opts.children) : "");
+    p.set("searchHotelCD", opts.hotel);
+    p.set("searchHotelDiv","");
+    p.set("hotelName","");
+    p.set("searchHotelName","");
+    p.set("searchLayer","");
+    p.set("searchRoomName","");
+    p.set("hotelSearchDetail","true");
+    p.set("detailOpenFlg","0");
+    p.set("checkPointStr","");
+    p.set("hotelChangeFlg","false");
+    p.set("removeSessionFlg","true");
+    p.set("returnFlg","false");
+    p.set("hotelShowFlg","");
+    p.set("displayType","data-hotel");
+    p.set("reservationStatus","1");
+    return BASE + p.toString();
+  }
+
+  // 子供の構成パターン
+  var KIDS_REAL = [{age:"04",bed:"1"},{age:"02",bed:"3"},{age:"00",bed:"3"}]; // 4歳ベッド+2歳0歳添い寝
+  var KIDS_ALLSOINE3 = [{age:"03",bed:"3"},{age:"03",bed:"3"},{age:"03",bed:"3"}];
+  var KIDS_2SOINE = [{age:"02",bed:"3"},{age:"00",bed:"3"}]; // B① 大人2+子2
+  var KIDS_1SOINE = [{age:"02",bed:"3"}]; // B② 大人1+子1
+
+  function refresh(){
+    var d = ymd(document.getElementById("useDate").value);
+    var n = document.getElementById("nights").value;
+    var ready = d.length===8;
+
+    function setLink(id, opts){
+      var el=document.getElementById(id);
+      if(!ready){ el.href="#"; el.style.opacity=.45; el.onclick=function(e){e.preventDefault();alert("先に宿泊日を入れてください");}; return; }
+      el.style.opacity=1; el.onclick=null;
+      el.href = build(opts);
+    }
+    // A 本命: 大人3 子(4歳ベッド+2歳0歳添い寝) ミラコスタ 1室
+    setLink("lnkA",  {rooms:1, adult:3, children:KIDS_REAL,     nights:n, date:d, hotel:"DHM"});
+    // A2 全員添い寝
+    setLink("lnkA2", {rooms:1, adult:3, children:KIDS_ALLSOINE3, nights:n, date:d, hotel:"DHM"});
+    // B 2室同時: 大人3 子3(構成は本命と同じ) ミラコスタ 2室
+    setLink("lnkB",  {rooms:2, adult:3, children:KIDS_REAL,     nights:n, date:d, hotel:"DHM"});
+    // B① HV側 大人2 子2添い寝 ミラコスタ 1室
+    setLink("lnkB1", {rooms:1, adult:2, children:KIDS_2SOINE,   nights:n, date:d, hotel:"DHM"});
+    // B② 安い 大人1 子1添い寝 指定なし 1室
+    setLink("lnkB2", {rooms:1, adult:1, children:KIDS_1SOINE,   nights:n, date:d, hotel:"ALL"});
+    // All 大人3子3 全ホテル
+    setLink("lnkAll",{rooms:1, adult:3, children:KIDS_REAL,     nights:n, date:d, hotel:"ALL"});
+
+    updateCancel(d);
+  }
+
+  // キャンセル料状況を宿泊日と今日から計算
+  function updateCancel(d){
+    var box=document.getElementById("cancelBox");
+    if(d.length!==8){ box.className="cancelinfo c-none"; box.textContent="宿泊日を入れると、キャンセル料の状況が出ます。"; return; }
+    var y=+d.slice(0,4), m=+d.slice(4,6)-1, day=+d.slice(6,8);
+    var stay=new Date(y,m,day);
+    var today=new Date(); today.setHours(0,0,0,0);
+    var diff=Math.round((stay-today)/86400000);
+    if(diff<0){ box.className="cancelinfo c-none"; box.textContent="その日付は過去です。"; return; }
+    if(diff>=15){ box.className="cancelinfo c-free"; box.textContent="✓ 宿泊"+diff+"日前 — 無料キャンセル期間内。予約しても15日前23:59まで無料で取消できます。"; }
+    else if(diff>=8){ box.className="cancelinfo c-fee"; box.textContent="⚠ 宿泊"+diff+"日前 — キャンセル料 1万円/室 がかかる期間。"; }
+    else if(diff>=2){ box.className="cancelinfo c-fee"; box.textContent="⚠ 宿泊"+diff+"日前 — キャンセル料 2万円/室 がかかる期間。"; }
+    else{ box.className="cancelinfo c-fee"; box.textContent="⚠ 宿泊"+diff+"日前 — キャンセル料 3万円/室（前日・当日）。"; }
+  }
+
+  document.getElementById("useDate").addEventListener("change",refresh);
+  document.getElementById("nights").addEventListener("change",refresh);
+
+  var today=new Date();
+  var iso=today.getFullYear()+"-"+String(today.getMonth()+1).padStart(2,"0")+"-"+String(today.getDate()).padStart(2,"0");
+  document.getElementById("useDate").min=iso;
+  refresh();
+</script>
+</body>
+</html>
