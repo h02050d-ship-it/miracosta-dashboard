@@ -34,6 +34,8 @@
     padding:14px;border-radius:12px;margin-top:10px;color:#fff;border:none;cursor:pointer;}
   .btnA{background:var(--gold);} .btnB{background:var(--sea);}
   .btnCal{background:var(--navy);}
+  .btnFeed{background:#5a3d8a;}
+  .feed{border:2px solid #5a3d8a;}
   .cal{border:2px solid var(--sea);}
   ol.steps{margin:6px 0 0;padding-left:22px;}
   ol.steps li{font-size:13px;margin:8px 0;line-height:1.5;}
@@ -73,15 +75,14 @@
 
 <div class="wrap">
 
-  <!-- 空室速報 X埋め込み一覧 -->
+  <!-- 空室速報 リストページへ -->
   <div class="card feed">
     <h2>📣 空室速報（発信まとめ）</h2>
-    <p class="note">空室を見つけた人の投稿を最新順に一覧表示。開くだけでOK、気になる投稿をタップで予約サイトへ。<br>
-    ※ミラコスタの空き全般が流れます（条件の絞り込みなし）。</p>
-    <a class="twitter-timeline" data-height="520" data-theme="light" data-chrome="noheader nofooter transparent"
-       href="https://twitter.com/MIRACOSTA_CHECK?ref_src=twsrc%5Etfw">空室速報を読み込み中…（表示されない場合は下のボタンから）</a>
-    <a class="btn btn-sub" href="https://x.com/MIRACOSTA_CHECK" target="_blank" rel="noopener" style="margin-top:8px;">Xで @MIRACOSTA_CHECK を開く</a>
-    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+    <p class="note">他の人が空室を一覧でまとめてるページ＆Xアカウント。開くだけで最新の空き状況が見えます。<br>
+    ※ミラコスタの空き全般（条件の絞り込みなし）。正確さは公式に劣るので、見つけたら公式で最終確認を。</p>
+    <a class="btn btnFeed" href="https://x.com/MIRACOSTA_CHECK" target="_blank" rel="noopener">📱 @MIRACOSTA_CHECK（X）の投稿一覧を見る</a>
+    <a class="btn btn-sub" href="https://castel.jp/tdr/miracosta-reserve/" target="_blank" rel="noopener">📋 CASTEL ミラコスタ空室リスト（表形式）</a>
+    <p class="note">👉 いちばん確実なのは、Xアプリで @MIRACOSTA_CHECK を<b>フォロー＋🔔通知ON</b>に。空きが出たらスマホに通知が来ます。</p>
   </div>
 
   <!-- カレンダーで空き日を俯瞰 -->
