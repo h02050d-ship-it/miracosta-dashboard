@@ -36,6 +36,20 @@
   .btnCal{background:var(--navy);}
   .btnFeed{background:#5a3d8a;}
   .feed{border:2px solid #5a3d8a;}
+  .calnav{display:flex;align-items:center;justify-content:space-between;margin:12px 0 8px;}
+  #calLabel{font-weight:700;font-size:17px;}
+  .navbtn{background:var(--sea);color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:16px;cursor:pointer;}
+  .navbtn:disabled{opacity:.3;cursor:default;}
+  .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+  .calgrid .dow{text-align:center;font-size:11px;font-weight:700;color:#5a6b7b;padding:2px 0;}
+  .calgrid .day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:9px;font-size:15px;font-weight:700;text-decoration:none;}
+  .calgrid a.day{background:#fff7e6;color:var(--navy);border:1px solid var(--gold);transition:.1s;}
+  .calgrid a.day:active,.calgrid a.day:hover{background:var(--gold);color:#fff;}
+  .calgrid .day.empty{background:transparent;}
+  .calgrid .day.past{background:#f1f4f7;color:#c2ccd6;}
+  .calgrid a.day.sat{border-color:var(--sea);} .calgrid a.day.sun{border-color:#c0392b;}
+  .calgrid .day.sat{color:var(--sea);} .calgrid .day.sun{color:#c0392b;}
+  .picksel{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:15px;margin-top:4px;}
   .cal{border:2px solid var(--sea);}
   ol.steps{margin:6px 0 0;padding-left:22px;}
   ol.steps li{font-size:13px;margin:8px 0;line-height:1.5;}
@@ -85,9 +99,29 @@
     <p class="note">👉 いちばん確実なのは、Xアプリで @MIRACOSTA_CHECK を<b>フォロー＋🔔通知ON</b>に。空きが出たらスマホに通知が来ます。</p>
   </div>
 
+  <!-- クリックできるカレンダー -->
+  <div class="card pick">
+    <h2>📅 カレンダーから選ぶ</h2>
+    <p class="note">日付をタップすると、その日の空室検索が公式サイトで開きます（パターンAボタンと同じ）。空きの有無は開いた先で確認。</p>
+    <label>クリックで開くパターン
+      <select id="calPattern" class="picksel">
+        <option value="A">A：ハーバービュー1室に家族5人（本命）</option>
+        <option value="B1">B①：ハーバービュー 大人1+子2</option>
+        <option value="ALL">全ホテル 大人2+子3</option>
+      </select>
+    </label>
+    <div class="calnav">
+      <button id="calPrev" class="navbtn">◀</button>
+      <span id="calLabel"></span>
+      <button id="calNext" class="navbtn">▶</button>
+    </div>
+    <div class="calgrid" id="calGrid"></div>
+    <p class="note">🟡=選べる日／灰=過去。土日も選べますが平日が安め・取りやすい。</p>
+  </div>
+
   <!-- カレンダーで空き日を俯瞰 -->
   <div class="card cal">
-    <h2>📆 空いてる日をカレンダーで見る（おすすめ）</h2>
+    <h2>📆 正確な空き◯✕を見る（公式カレンダー）</h2>
     <p class="note">公式の「部屋ごと空きカレンダー」で、月内のどの日が空いてるか◯✕で一目。日付が決まってない時はまずこれ。</p>
     <a class="btn btnCal" id="lnkRooms" href="https://reserve.tokyodisneyresort.jp/hotel/list/?showWay=&roomsNum=&adultNum=&childNum=&stayingDays=1&useDate=&cpListStr=&childAgeBedInform=&searchHotelCD=DHM&searchHotelDiv=&hotelName=&searchHotelName=&searchLayer=&searchRoomName=&hotelSearchDetail=true&detailOpenFlg=0&checkPointStr=&hotelChangeFlg=false&removeSessionFlg=true&returnFlg=false&hotelShowFlg=&displayType=hotel-search&reservationStatus=1" target="_blank" rel="noopener">▶ ミラコスタの部屋一覧を開く</a>
     <p class="note" style="margin-top:12px;font-weight:600;color:#1b3a5b;">開いたら、この3ステップでカレンダーが出ます👇</p>
@@ -299,6 +333,40 @@
   var iso=today.getFullYear()+"-"+String(today.getMonth()+1).padStart(2,"0")+"-"+String(today.getDate()).padStart(2,"0");
   document.getElementById("useDate").min=iso;
   refresh();
+
+  /* ===== クリックできるカレンダー ===== */
+  var calY, calM;
+  function calURL(dateStr){
+    var pat=document.getElementById("calPattern").value;
+    if(pat==="B1") return build({rooms:1, adult:1, children:KIDS_2SOINE, nights:1, date:dateStr, hotel:"DHM"});
+    if(pat==="ALL") return build({rooms:1, adult:2, children:KIDS_REAL,   nights:1, date:dateStr, hotel:"ALL"});
+    return build({rooms:1, adult:2, children:KIDS_REAL, nights:1, date:dateStr, hotel:"DHM"});
+  }
+  function renderCal(){
+    var grid=document.getElementById("calGrid"); grid.innerHTML="";
+    var dows=["月","火","水","木","金","土","日"];
+    dows.forEach(function(d,i){ var e=document.createElement("div"); e.className="dow"+(i===5?" sat":i===6?" sun":""); e.textContent=d; grid.appendChild(e); });
+    document.getElementById("calLabel").textContent=calY+"年"+(calM+1)+"月";
+    var startDow=(new Date(calY,calM,1).getDay()+6)%7;
+    for(var i=0;i<startDow;i++){ var e=document.createElement("div"); e.className="day empty"; grid.appendChild(e); }
+    var days=new Date(calY,calM+1,0).getDate();
+    var t=new Date(); t.setHours(0,0,0,0);
+    for(var d=1;d<=days;d++){
+      var dt=new Date(calY,calM,d); var dow=(dt.getDay()+6)%7;
+      var sc=dow===5?" sat":dow===6?" sun":"";
+      var ds=calY+String(calM+1).padStart(2,"0")+String(d).padStart(2,"0");
+      if(dt<t){ var e=document.createElement("div"); e.className="day past"+sc; e.textContent=d; grid.appendChild(e); }
+      else{ var a=document.createElement("a"); a.className="day"+sc; a.textContent=d; a.href=calURL(ds); a.target="_blank"; a.rel="noopener"; grid.appendChild(a); }
+    }
+  }
+  function calShift(n){ calM+=n; if(calM<0){calM=11;calY--;} if(calM>11){calM=0;calY++;} renderCal(); }
+  (function(){
+    var t=new Date(); calY=t.getFullYear(); calM=t.getMonth();
+    document.getElementById("calPrev").onclick=function(){calShift(-1);};
+    document.getElementById("calNext").onclick=function(){calShift(1);};
+    document.getElementById("calPattern").onchange=renderCal;
+    renderCal();
+  })();
 </script>
 </body>
 </html>
