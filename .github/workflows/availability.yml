@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "*/20 * * * *"   # 20分ごと(実効20〜35分)
   workflow_dispatch:
+    inputs:
+      test_notify:
+        description: "メール通知テスト(Issueをボットが作成)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -42,6 +47,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if [ "${{ inputs.test_notify }}" = "true" ]; then
+            printf '%s\n' "これは**メール配達テスト**です（ボット作成）。" "" "このメールが h02050d@gmail.com に届いていれば、HV空き検知の通知は本番でも届きます。" "確認できたらこのIssueは閉じてください。" > new_hv_issue.md
+          fi
           if [ -s new_hv_issue.md ]; then
             gh issue create --repo h02050d-ship-it/miracosta-dashboard \
               --title "🌟 ミラコスタ ハーバービュー空き検知！" \
