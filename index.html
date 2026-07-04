@@ -48,9 +48,14 @@
   .calgrid .day.empty{background:transparent;}
   .calgrid .day.past{background:#f1f4f7;color:#c2ccd6;}
   .calgrid a.day.hvday{background:var(--gold);color:#fff;border:2px solid #a8842f;box-shadow:0 0 0 2px #f3e3bd;}
-  .calgrid .day.othday{background:#fdf9ef;color:#b7a878;border:1px solid #eadfc2;}
   .calgrid .day.na{background:#e7ebef;color:#b6c0ca;border:1px solid #e0e6ec;}
   .calgrid .day.unk2{background:#fff;border:1px dashed #dde5ec;color:#b6c0ca;}
+  .hvbanner{background:linear-gradient(135deg,#c9a24b,#e3c06a);border:3px solid #a8842f;border-radius:16px;
+    padding:16px;margin-bottom:16px;box-shadow:0 4px 18px rgba(201,162,75,.45);animation:hvpulse 1.6s infinite;}
+  .hvbanner h2{color:#fff;font-size:17px;margin:0 0 10px;text-shadow:0 1px 2px rgba(0,0,0,.25);}
+  .hvbanner a{display:block;background:#fff;color:#7a5c14;font-weight:800;font-size:17px;text-align:center;
+    padding:14px;border-radius:12px;text-decoration:none;margin-top:8px;}
+  @keyframes hvpulse{0%,100%{box-shadow:0 4px 18px rgba(201,162,75,.45);}50%{box-shadow:0 4px 30px rgba(201,162,75,.9);}}
   .leg{display:flex;flex-wrap:wrap;gap:10px;font-size:11.5px;color:#3a4b5b;margin-top:8px;}
   .leg span{display:flex;align-items:center;gap:4px;}
   .lg{display:inline-block;width:14px;height:14px;border-radius:4px;}
@@ -97,6 +102,9 @@
 
 <div class="wrap">
 
+  <!-- HV空き 大型アラート（空きがある時だけ表示） -->
+  <div id="hvAlert" style="display:none"></div>
+
   <!-- 空室速報 リストページへ -->
   <div class="card feed">
     <h2>📣 空室速報（発信まとめ）</h2>
@@ -126,12 +134,11 @@
     <div class="calgrid" id="calGrid"></div>
     <div class="leg">
       <span><span class="lg" style="background:var(--gold);border:2px solid #a8842f;"></span><b>ハーバービュー空きあり（ここだけ押せる）</b></span>
-      <span><span class="lg" style="background:#fdf9ef;border:1px solid #eadfc2;"></span>他の部屋のみ空き（押せない）</span>
-      <span><span class="lg" style="background:#e7ebef;"></span>空きなし</span>
+      <span><span class="lg" style="background:#e7ebef;"></span>HV空きなし</span>
       <span><span class="lg" style="background:#fff;border:1px dashed #dde5ec;"></span>データなし</span>
     </div>
     <div id="availMeta">空き情報を読み込み中…</div>
-    <p class="note">⚠️ 空き◯✕は<b>楽天トラベル在庫ベースの目安</b>（2時間ごと自動更新）。公式のみの空きは反映されないことがあります。最終判断は押した先の公式ページで。</p>
+    <p class="note">⚠️ 空き情報は<b>楽天トラベル在庫ベースの目安</b>（約20分ごと自動更新）。公式のみの空きは反映されないことがあります。最終判断は押した先の公式ページで。</p>
   </div>
 
   <!-- カレンダーで空き日を俯瞰 -->
@@ -379,8 +386,7 @@
         grid.appendChild(a); continue;
       }
       var e=document.createElement("div"); e.textContent=d;
-      if(info && info.a===true){ e.className="day othday"+sc; e.title="他の部屋のみ空き: "+(info.r||[]).join(" / "); }
-      else if(info && info.a===false){ e.className="day na"+sc; }
+      if(info){ e.className="day na"+sc; }
       else { e.className="day unk2"+sc; e.title="データなし"; }
       grid.appendChild(e);
     }
@@ -389,17 +395,47 @@
   fetch("availability.json?t="+Date.now()).then(function(r){return r.ok?r.json():null;}).then(function(j){
     AVAIL=j;
     var m=document.getElementById("availMeta");
-    if(j&&j.updated){ m.textContent="空き情報 最終更新: "+j.updated+"（楽天トラベル在庫）"; }
-    else { m.textContent="空き情報は準備中（全日クリック可のまま表示しています）"; }
-    renderCal();
-  }).catch(function(){ document.getElementById("availMeta").textContent="空き情報を取得できませんでした（全日クリック可のまま）"; });
-  function calShift(n){ calM+=n; if(calM<0){calM=11;calY--;} if(calM>11){calM=0;calY++;} renderCal(); }
+    if(j&&j.updated){ m.textContent="空き情報 最終更新: "+j.updated+"（楽天トラベル在庫・約20分ごと）"; }
+    else { m.textContent="空き情報は準備中"; }
+    renderCal(); renderHvAlert();
+  }).catch(function(){ document.getElementById("availMeta").textContent="空き情報を取得できませんでした"; });
+  var minY, minM; // 今月より前へは戻れない
+  function calShift(n){
+    var ny=calY, nm=calM+n;
+    if(nm<0){nm=11;ny--;} if(nm>11){nm=0;ny++;}
+    if(ny<minY || (ny===minY && nm<minM)) return; // 過去月は禁止
+    calY=ny; calM=nm; renderCal();
+  }
+  function updateNav(){
+    document.getElementById("calPrev").disabled = (calY===minY && calM===minM);
+  }
+  // HV空き日をページ最上部に大きく表示
+  function renderHvAlert(){
+    var box=document.getElementById("hvAlert");
+    if(!AVAIL||!AVAIL.days){ box.style.display="none"; return; }
+    var t=new Date(); t.setHours(0,0,0,0);
+    var hits=Object.keys(AVAIL.days).filter(function(ds){
+      var v=AVAIL.days[ds];
+      var dt=new Date(+ds.slice(0,4), +ds.slice(4,6)-1, +ds.slice(6,8));
+      return v.a===true && v.hv && dt>=t;
+    }).sort();
+    if(!hits.length){ box.style.display="none"; return; }
+    var html='<div class="hvbanner"><h2>🌟 ハーバービューに空きが出ています！</h2>';
+    hits.slice(0,6).forEach(function(ds){
+      var y=+ds.slice(0,4), m=+ds.slice(4,6), d=+ds.slice(6,8);
+      var dow=["日","月","火","水","木","金","土"][new Date(y,m-1,d).getDay()];
+      var rooms=(AVAIL.days[ds].r||[]).filter(function(n){return n.indexOf("ハーバー")>=0;}).join(" / ");
+      html+='<a href="'+calURL(ds)+'" target="_blank" rel="noopener">'+m+'/'+d+'（'+dow+'）を今すぐ予約 ▶<br><span style="font-size:11.5px;font-weight:600;color:#a08434">'+rooms+'</span></a>';
+    });
+    html+='</div>';
+    box.innerHTML=html; box.style.display="block";
+  }
   (function(){
-    var t=new Date(); calY=t.getFullYear(); calM=t.getMonth();
-    document.getElementById("calPrev").onclick=function(){calShift(-1);};
-    document.getElementById("calNext").onclick=function(){calShift(1);};
-    document.getElementById("calPattern").onchange=renderCal;
-    renderCal();
+    var t=new Date(); calY=t.getFullYear(); calM=t.getMonth(); minY=calY; minM=calM;
+    document.getElementById("calPrev").onclick=function(){calShift(-1); updateNav();};
+    document.getElementById("calNext").onclick=function(){calShift(1); updateNav();};
+    document.getElementById("calPattern").onchange=function(){renderCal(); renderHvAlert();};
+    renderCal(); updateNav();
   })();
 </script>
 </body>

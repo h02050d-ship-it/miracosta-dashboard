@@ -2,7 +2,7 @@ name: update-availability
 
 on:
   schedule:
-    - cron: "23 */2 * * *"   # 2時間ごと
+    - cron: "*/20 * * * *"   # 20分ごと(実効20〜35分)
   workflow_dispatch:
 
 permissions:
