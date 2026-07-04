@@ -47,6 +47,13 @@
   .calgrid a.day:active,.calgrid a.day:hover{background:var(--gold);color:#fff;}
   .calgrid .day.empty{background:transparent;}
   .calgrid .day.past{background:#f1f4f7;color:#c2ccd6;}
+  .calgrid a.day.hvday{background:var(--gold);color:#fff;border:2px solid #a8842f;box-shadow:0 0 0 2px #f3e3bd;}
+  .calgrid .day.na{background:#e7ebef;color:#b6c0ca;border:1px solid #e0e6ec;}
+  .calgrid a.day.unk{background:#fff;border:1px dashed #c9d4de;color:#7a8a99;}
+  .leg{display:flex;flex-wrap:wrap;gap:10px;font-size:11.5px;color:#3a4b5b;margin-top:8px;}
+  .leg span{display:flex;align-items:center;gap:4px;}
+  .lg{display:inline-block;width:14px;height:14px;border-radius:4px;}
+  #availMeta{font-size:11px;color:#7a8a99;margin-top:6px;}
   .calgrid a.day.sat{border-color:var(--sea);} .calgrid a.day.sun{border-color:#c0392b;}
   .calgrid .day.sat{color:var(--sea);} .calgrid .day.sun{color:#c0392b;}
   .picksel{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:15px;margin-top:4px;}
@@ -116,7 +123,14 @@
       <button id="calNext" class="navbtn">▶</button>
     </div>
     <div class="calgrid" id="calGrid"></div>
-    <p class="note">🟡=選べる日／灰=過去。土日も選べますが平日が安め・取りやすい。</p>
+    <div class="leg">
+      <span><span class="lg" style="background:var(--gold);border:2px solid #a8842f;"></span>ハーバービュー空きあり</span>
+      <span><span class="lg" style="background:#fff7e6;border:1px solid var(--gold);"></span>他の部屋に空きあり</span>
+      <span><span class="lg" style="background:#e7ebef;"></span>空きなし（押せない）</span>
+      <span><span class="lg" style="background:#fff;border:1px dashed #c9d4de;"></span>データなし（押すと公式で確認）</span>
+    </div>
+    <div id="availMeta">空き情報を読み込み中…</div>
+    <p class="note">⚠️ 空き◯✕は<b>楽天トラベル在庫ベースの目安</b>（2時間ごと自動更新）。公式のみの空きは反映されないことがあります。最終判断は押した先の公式ページで。</p>
   </div>
 
   <!-- カレンダーで空き日を俯瞰 -->
@@ -334,8 +348,8 @@
   document.getElementById("useDate").min=iso;
   refresh();
 
-  /* ===== クリックできるカレンダー ===== */
-  var calY, calM;
+  /* ===== クリックできるカレンダー（楽天在庫連動） ===== */
+  var calY, calM, AVAIL=null;
   function calURL(dateStr){
     var pat=document.getElementById("calPattern").value;
     if(pat==="B1") return build({rooms:1, adult:1, children:KIDS_2SOINE, nights:1, date:dateStr, hotel:"DHM"});
@@ -355,10 +369,27 @@
       var dt=new Date(calY,calM,d); var dow=(dt.getDay()+6)%7;
       var sc=dow===5?" sat":dow===6?" sun":"";
       var ds=calY+String(calM+1).padStart(2,"0")+String(d).padStart(2,"0");
-      if(dt<t){ var e=document.createElement("div"); e.className="day past"+sc; e.textContent=d; grid.appendChild(e); }
-      else{ var a=document.createElement("a"); a.className="day"+sc; a.textContent=d; a.href=calURL(ds); a.target="_blank"; a.rel="noopener"; grid.appendChild(a); }
+      if(dt<t){ var e=document.createElement("div"); e.className="day past"+sc; e.textContent=d; grid.appendChild(e); continue; }
+      var info=AVAIL&&AVAIL.days?AVAIL.days[ds]:null;
+      if(info && info.a===false){
+        // 楽天在庫で空きなし → 押せない
+        var e=document.createElement("div"); e.className="day na"+sc; e.textContent=d; grid.appendChild(e); continue;
+      }
+      var a=document.createElement("a"); a.textContent=d; a.target="_blank"; a.rel="noopener"; a.href=calURL(ds);
+      if(info && info.a===true && info.hv){ a.className="day hvday"+sc; a.title="ハーバービュー空きあり: "+(info.r||[]).join(" / "); }
+      else if(info && info.a===true){ a.className="day"+sc; a.title=(info.r||[]).join(" / "); }
+      else { a.className="day unk"+sc; a.title="データなし（公式で確認）"; }
+      grid.appendChild(a);
     }
   }
+  // 空き情報を読み込み
+  fetch("availability.json?t="+Date.now()).then(function(r){return r.ok?r.json():null;}).then(function(j){
+    AVAIL=j;
+    var m=document.getElementById("availMeta");
+    if(j&&j.updated){ m.textContent="空き情報 最終更新: "+j.updated+"（楽天トラベル在庫）"; }
+    else { m.textContent="空き情報は準備中（全日クリック可のまま表示しています）"; }
+    renderCal();
+  }).catch(function(){ document.getElementById("availMeta").textContent="空き情報を取得できませんでした（全日クリック可のまま）"; });
   function calShift(n){ calM+=n; if(calM<0){calM=11;calY--;} if(calM>11){calM=0;calY++;} renderCal(); }
   (function(){
     var t=new Date(); calY=t.getFullYear(); calM=t.getMonth();
