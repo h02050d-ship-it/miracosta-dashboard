@@ -29,5 +29,5 @@ jobs:
           git config user.name "availability-bot"
           git config user.email "actions@github.com"
           git add availability.json
-          git diff --cached --quiet && echo "no change" || git commit -m "update availability [skip ci]"
+          git diff --cached --quiet && echo "no change" || git commit -m "update availability"
           git push
