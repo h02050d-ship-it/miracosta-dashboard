@@ -33,6 +33,11 @@
   .btn{display:block;width:100%;text-align:center;text-decoration:none;font-weight:700;font-size:15px;
     padding:14px;border-radius:12px;margin-top:10px;color:#fff;border:none;cursor:pointer;}
   .btnA{background:var(--gold);} .btnB{background:var(--sea);}
+  .btnCal{background:var(--navy);}
+  .cal{border:2px solid var(--sea);}
+  ol.steps{margin:6px 0 0;padding-left:22px;}
+  ol.steps li{font-size:13px;margin:8px 0;line-height:1.5;}
+  .s-sub{color:#5a6b7b;font-size:12px;font-weight:400;}
   .btn:active{opacity:.8;}
   .btn-sub{background:#eef3f8;color:var(--navy);font-weight:600;font-size:13px;padding:11px;}
   .note{font-size:12px;color:#5a6b7b;margin-top:8px;}
@@ -68,9 +73,23 @@
 
 <div class="wrap">
 
+  <!-- カレンダーで空き日を俯瞰 -->
+  <div class="card cal">
+    <h2>📆 空いてる日をカレンダーで見る（おすすめ）</h2>
+    <p class="note">公式の「部屋ごと空きカレンダー」で、月内のどの日が空いてるか◯✕で一目。日付が決まってない時はまずこれ。</p>
+    <a class="btn btnCal" id="lnkRooms" href="https://reserve.tokyodisneyresort.jp/hotel/list/?showWay=&roomsNum=&adultNum=&childNum=&stayingDays=1&useDate=&cpListStr=&childAgeBedInform=&searchHotelCD=DHM&searchHotelDiv=&hotelName=&searchHotelName=&searchLayer=&searchRoomName=&hotelSearchDetail=true&detailOpenFlg=0&checkPointStr=&hotelChangeFlg=false&removeSessionFlg=true&returnFlg=false&hotelShowFlg=&displayType=hotel-search&reservationStatus=1" target="_blank" rel="noopener">▶ ミラコスタの部屋一覧を開く</a>
+    <p class="note" style="margin-top:12px;font-weight:600;color:#1b3a5b;">開いたら、この3ステップでカレンダーが出ます👇</p>
+    <ol class="steps">
+      <li><b>狙う部屋の「客室の空き状況を確認する」</b>ボタンを押す<br><span class="s-sub">本命は「ポルト・パラディーゾ・サイド スーペリアルーム ハーバービュー」</span></li>
+      <li><b>人数を入れて「次へ」</b><br><span class="s-sub">大人2・子ども3／年齢=4才(ベッド利用)・2才(添い寝)・0才(添い寝)</span></li>
+      <li><b>月を選ぶ</b>→ カレンダー表示<br><span class="s-sub">◯=空き / 数字=残室数 / ✕=満室。◯の日をクリックで予約へ</span></li>
+    </ol>
+    <div class="warnbox">この方法が一番正確（公式の実在庫）。ただし短時間に何度も操作するとbot判定が出るので、普通のペースで。</div>
+  </div>
+
   <!-- 日付入力 -->
   <div class="card">
-    <h2>📅 宿泊日を入れる</h2>
+    <h2>📅 日付が決まってるなら直接検索</h2>
     <label>宿泊日（チェックイン）</label>
     <input type="date" id="useDate">
     <div class="row">
