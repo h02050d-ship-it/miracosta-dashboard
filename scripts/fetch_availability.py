@@ -62,8 +62,31 @@ def fetch(day):
                     rooms.append(name)
     return {"avail": len(rooms) > 0, "rooms": rooms}
 
+DOW = ["月", "火", "水", "木", "金", "土", "日"]
+
+def official_url(ds):
+    return ("https://reserve.tokyodisneyresort.jp/hotel/list/?roomsNum=1&adultNum=2&childNum=3"
+            f"&stayingDays=1&useDate={ds}&childAgeBedInform=04_1%7C02_3%7C00_3%7C"
+            "&searchHotelCD=DHM&hotelSearchDetail=true&detailOpenFlg=0&hotelChangeFlg=false"
+            "&removeSessionFlg=true&returnFlg=false&displayType=data-hotel&reservationStatus=1")
+
+def cancel_note(day):
+    diff = (day - date.today()).days
+    if diff >= 15:
+        return f"✅ いま予約すれば無料キャンセル期間（宿泊{diff}日前）"
+    fee = "1万円" if diff >= 8 else "2万円" if diff >= 2 else "3万円"
+    return f"⚠️ **キャンセル料 {fee}/室 の時期**（宿泊{diff}日前・取消不可のつもりで判断を）"
+
 def main():
     today = date.today()
+    # 前回データ（差分検知＝新規HVだけメール通知するため）
+    old = {}
+    try:
+        with open("availability.json", encoding="utf-8") as f:
+            old = json.load(f).get("days", {})
+    except Exception:
+        pass
+
     out = {"updated": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()),
            "source": "Rakuten Travel VacantHotelSearch (hotelNo=74733, adultNum=2)",
            "days": {}}
@@ -79,9 +102,28 @@ def main():
         time.sleep(SLEEP)
     with open("availability.json", "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
+
+    # 新規にHVが出た日を検出 → Issue本文を書き出し（GitHubがメール通知してくれる）
+    new_hv = [k for k, v in out["days"].items()
+              if v["hv"] and not (old.get(k) or {}).get("hv")]
+    if new_hv:
+        lines = ["ハーバービューに**新しい空き**が出ました（楽天トラベル在庫）。", ""]
+        for ds in sorted(new_hv):
+            d = date(int(ds[:4]), int(ds[4:6]), int(ds[6:8]))
+            rooms = " / ".join(n for n in out["days"][ds]["r"] if "ハーバー" in n)
+            lines.append(f"### {d.month}/{d.day}（{DOW[d.weekday()]}）")
+            lines.append(f"- 部屋: {rooms}")
+            lines.append(f"- {cancel_note(d)}")
+            lines.append(f"- ▶ [公式で今すぐ予約]({official_url(ds)})")
+            lines.append("")
+        lines.append("[📊 ダッシュボードを開く](https://h02050d-ship-it.github.io/miracosta-dashboard/)")
+        with open("new_hv_issue.md", "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))
+        print("NEW HV:", ",".join(sorted(new_hv)))
+
     n_avail = sum(1 for v in out["days"].values() if v["a"])
     n_hv = sum(1 for v in out["days"].values() if v["hv"])
-    print(f"done: {len(out['days'])} days, avail={n_avail}, hv={n_hv}")
+    print(f"done: {len(out['days'])} days, avail={n_avail}, hv={n_hv}, new_hv={len(new_hv)}")
 
 if __name__ == "__main__":
     main()

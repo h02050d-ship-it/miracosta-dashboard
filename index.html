@@ -391,8 +391,11 @@
       grid.appendChild(e);
     }
   }
-  // 空き情報を読み込み
-  fetch("availability.json?t="+Date.now()).then(function(r){return r.ok?r.json():null;}).then(function(j){
+  // 空き情報を読み込み（dataブランチから。失敗時は同梱ファイルにフォールバック）
+  var AVAIL_URL="https://raw.githubusercontent.com/h02050d-ship-it/miracosta-dashboard/data/availability.json";
+  fetch(AVAIL_URL+"?t="+Date.now())
+    .then(function(r){ if(r.ok) return r.json(); return fetch("availability.json?t="+Date.now()).then(function(r2){return r2.ok?r2.json():null;}); })
+    .then(function(j){
     AVAIL=j;
     var m=document.getElementById("availMeta");
     if(j&&j.updated){ m.textContent="空き情報 最終更新: "+j.updated+"（楽天トラベル在庫・約20分ごと）"; }

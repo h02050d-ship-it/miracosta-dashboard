@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: availability
@@ -20,14 +21,31 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Get previous data (diff detection)
+        run: curl -sf "https://raw.githubusercontent.com/h02050d-ship-it/miracosta-dashboard/data/availability.json" -o availability.json || true
       - name: Fetch availability from Rakuten Travel API
         env:
           RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
         run: python scripts/fetch_availability.py
-      - name: Commit availability.json
+      - name: Publish to data branch (no Pages rebuild)
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git config user.name "availability-bot"
-          git config user.email "actions@github.com"
-          git add availability.json
-          git diff --cached --quiet && echo "no change" || git commit -m "update availability"
-          git push
+          R="h02050d-ship-it/miracosta-dashboard"
+          SHA=$(gh api "repos/$R/contents/availability.json?ref=data" --jq .sha 2>/dev/null || true)
+          gh api -X PUT "repos/$R/contents/availability.json" \
+            -f message="update availability" -f branch=data \
+            -f content="$(base64 -w0 availability.json)" \
+            ${SHA:+-f sha=$SHA} > /dev/null
+          echo "published to data branch"
+      - name: Notify new HV via Issue (GitHub sends email)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -s new_hv_issue.md ]; then
+            gh issue create --repo h02050d-ship-it/miracosta-dashboard \
+              --title "🌟 ミラコスタ ハーバービュー空き検知！" \
+              --body-file new_hv_issue.md
+          else
+            echo "no new HV"
+          fi
