@@ -29,7 +29,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
       REPO: h02050d-ship-it/miracosta-dashboard
-      LOOP_SECONDS: "600"     # 10分ごとにチェック
+      LOOP_SECONDS: "360"     # 待機6分＋取得約4分 ≒ 実質10分間隔
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
