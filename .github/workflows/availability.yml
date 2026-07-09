@@ -1,8 +1,11 @@
 name: update-availability
 
+# GitHubの定期実行は無料枠だと2時間以上に間引かれる。
+# そこで「1本の長時間ジョブが内部で10分ごとにチェックし続ける」方式にする。
+# スケジュールは"見張りが死んでたら再起動する保険"としてだけ使う（cancel-in-progressで常に1本だけ生かす）。
 on:
   schedule:
-    - cron: "*/20 * * * *"   # 20分ごと(実効20〜35分)
+    - cron: "*/30 * * * *"   # 再起動用ハートビート(間引かれてもOK、内部ループが本体)
   workflow_dispatch:
     inputs:
       test_notify:
@@ -15,45 +18,53 @@ permissions:
   issues: write
 
 concurrency:
-  group: availability
-  cancel-in-progress: false
+  group: poll
+  cancel-in-progress: true    # 新しい起動が古い見張りを引き継ぐ(常に1本だけ稼働)
 
 jobs:
-  fetch:
+  poll:
     runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
+      REPO: h02050d-ship-it/miracosta-dashboard
+      LOOP_SECONDS: "600"     # 10分ごとにチェック
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Get previous data (diff detection)
-        run: curl -sf "https://raw.githubusercontent.com/h02050d-ship-it/miracosta-dashboard/data/availability.json" -o availability.json || true
-      - name: Fetch availability from Rakuten Travel API
-        env:
-          RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
-        run: python scripts/fetch_availability.py
-      - name: Publish to data branch (no Pages rebuild)
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: 10分ごとの見張りループ
         run: |
-          R="h02050d-ship-it/miracosta-dashboard"
-          SHA=$(gh api "repos/$R/contents/availability.json?ref=data" --jq .sha 2>/dev/null || true)
-          gh api -X PUT "repos/$R/contents/availability.json" \
-            -f message="update availability" -f branch=data \
-            -f content="$(base64 -w0 availability.json)" \
-            ${SHA:+-f sha=$SHA} > /dev/null
-          echo "published to data branch"
-      - name: Notify new HV via Issue (GitHub sends email)
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if [ "${{ inputs.test_notify }}" = "true" ]; then
-            printf '%s\n' "これは**メール配達テスト**です（ボット作成）。" "" "このメールが h02050d@gmail.com に届いていれば、HV空き検知の通知は本番でも届きます。" "確認できたらこのIssueは閉じてください。" > new_hv_issue.md
-          fi
-          if [ -s new_hv_issue.md ]; then
-            gh issue create --repo h02050d-ship-it/miracosta-dashboard \
-              --title "🌟 ミラコスタ ハーバービュー空き検知！" \
-              --body-file new_hv_issue.md
-          else
-            echo "no new HV"
-          fi
+          set +e
+          TEST="${{ inputs.test_notify }}"
+          END=$(( $(date +%s) + 340*60 ))   # 約5.6時間走ってから自然終了（保険で次のハートビートが再起動）
+          FIRST=1
+          while [ "$(date +%s)" -lt "$END" ]; do
+            echo "----- cycle $(date -u +%H:%M:%S)UTC -----"
+            # 1) 前回データを取得（差分検知＝新規HVだけ通知するため）
+            curl -sf "https://raw.githubusercontent.com/$REPO/data/availability.json" -o availability.json || true
+            # 2) 楽天APIで最新の空きを取得（availability.json と new_hv_issue.md を書き出す）
+            python scripts/fetch_availability.py || echo "fetch failed this cycle"
+            # 3) テスト通知（手動起動＋初回のみ）
+            if [ "$TEST" = "true" ] && [ "$FIRST" = "1" ]; then
+              printf '%s\n' "これは**メール配達テスト**です（ボット作成）。" "" "このメールが届いていれば、HV空き検知の本番通知もOKです。" > new_hv_issue.md
+            fi
+            # 4) dataブランチへ公開（Pagesは再ビルドされない）
+            SHA=$(gh api "repos/$REPO/contents/availability.json?ref=data" --jq .sha 2>/dev/null || true)
+            gh api -X PUT "repos/$REPO/contents/availability.json" \
+              -f message="update availability" -f branch=data \
+              -f content="$(base64 -w0 availability.json)" \
+              ${SHA:+-f sha=$SHA} > /dev/null && echo "published" || echo "publish failed"
+            # 5) 新規HV → Issue作成（GitHubがメール送信）
+            if [ -s new_hv_issue.md ]; then
+              gh issue create --repo "$REPO" \
+                --title "🌟 ミラコスタ ハーバービュー空き検知！" \
+                --body-file new_hv_issue.md && echo "issue created (email sent)"
+              rm -f new_hv_issue.md
+            fi
+            FIRST=0
+            sleep "$LOOP_SECONDS"
+          done
+          echo "loop ended (heartbeat will restart)"

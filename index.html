@@ -138,7 +138,7 @@
       <span><span class="lg" style="background:#fff;border:1px dashed #dde5ec;"></span>データなし</span>
     </div>
     <div id="availMeta">空き情報を読み込み中…</div>
-    <p class="note">⚠️ 空き情報は<b>楽天トラベル在庫ベースの目安</b>（約20分ごと自動更新）。公式のみの空きは反映されないことがあります。最終判断は押した先の公式ページで。</p>
+    <p class="note">⚠️ 空き情報は<b>楽天トラベル在庫ベースの目安</b>（約10分ごと自動更新）。公式のみの空きは反映されないことがあります。最終判断は押した先の公式ページで。</p>
   </div>
 
   <!-- カレンダーで空き日を俯瞰 -->
@@ -398,7 +398,7 @@
     .then(function(j){
     AVAIL=j;
     var m=document.getElementById("availMeta");
-    if(j&&j.updated){ m.textContent="空き情報 最終更新: "+j.updated+"（楽天トラベル在庫・約20分ごと）"; }
+    if(j&&j.updated){ m.textContent="空き情報 最終更新: "+j.updated+"（楽天トラベル在庫・約10分ごと）"; }
     else { m.textContent="空き情報は準備中"; }
     applyDemo();
     renderCal(); renderHvAlert();
