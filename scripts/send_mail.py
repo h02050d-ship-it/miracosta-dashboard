@@ -1,40 +1,54 @@
 #!/usr/bin/env python3
-"""HV空き検知メールを Gmail SMTP で h02050d@gmail.com に送る。
-パスワードは環境変数 GMAIL_APP_PASSWORD（GitHub Secrets）から。コード/ファイルには書かない。
+"""HV空き検知メールを送る。
+差出人を「自分(h02050d)」にすると受信トレイに入らないため（Gmailの自分宛仕様）、
+会社用アカウント(hayazaimuku)から h02050d@gmail.com へ送る＝受信トレイに届く。
+パスワードは環境変数(GitHub Secrets)から。コード/ファイルには書かない。
 """
 import os, sys, smtplib, ssl, datetime
 from email.mime.text import MIMEText
 from email.header import Header
 from email.utils import make_msgid
 
-USER = "h02050d@gmail.com"
-PW = os.environ.get("GMAIL_APP_PASSWORD", "").strip()
+RECIPIENT = "h02050d@gmail.com"
+
+# 優先: 会社用アカウントから送る（受信トレイに届く）
+BIZ_PW = os.environ.get("BIZ_GMAIL_APP_PASSWORD", "").strip()
+BIZ_USER = os.environ.get("BIZ_GMAIL_USER", "hayazaimuku@gmail.com").strip()
+# 予備: 自分から自分（受信トレイには入らないが記録用）
+SELF_PW = os.environ.get("GMAIL_APP_PASSWORD", "").strip()
 
 
 def main():
-    if not PW:
-        print("GMAIL_APP_PASSWORD not set -> skip email")
+    if BIZ_PW:
+        auth_user, pw, sender = BIZ_USER, BIZ_PW, BIZ_USER
+    elif SELF_PW:
+        auth_user, pw, sender = RECIPIENT, SELF_PW, RECIPIENT
+    else:
+        print("no mail password set -> skip email")
         return 0
+
     body_file = sys.argv[1] if len(sys.argv) > 1 else "new_hv_issue.md"
     subject = sys.argv[2] if len(sys.argv) > 2 else "ミラコスタ ハーバービュー空き検知"
-    # 件名を毎回ユニークに（同一件名だとスレッド化→ミュート継承するため）
     subject = subject + " " + datetime.datetime.now().strftime("%-m/%-d %H:%M")
+
     try:
         with open(body_file, encoding="utf-8") as f:
             body = f.read()
     except Exception:
         body = "（本文なし）"
+
     msg = MIMEText(body, "plain", "utf-8")
     msg["Subject"] = Header(subject, "utf-8")
-    msg["From"] = USER
-    msg["To"] = USER
-    msg["Message-ID"] = make_msgid(domain="miracosta.local")  # 毎回別スレッド化
+    msg["From"] = str(Header("ミラコスタ空室通知", "utf-8")) + " <" + sender + ">"
+    msg["To"] = RECIPIENT
+    msg["Message-ID"] = make_msgid(domain="miracosta.local")
+
     ctx = ssl.create_default_context()
     with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as s:
         s.starttls(context=ctx)
-        s.login(USER, PW)
-        s.sendmail(USER, [USER], msg.as_string())
-    print("email sent to", USER)
+        s.login(auth_user, pw)
+        s.sendmail(sender, [RECIPIENT], msg.as_string())
+    print("email sent: from", sender, "to", RECIPIENT)
     return 0
 
 
