@@ -31,6 +31,8 @@ jobs:
       NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
       GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
       BIZ_GMAIL_APP_PASSWORD: ${{ secrets.BIZ_GMAIL_APP_PASSWORD }}
+      LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
+      LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
       REPO: h02050d-ship-it/miracosta-dashboard
       LOOP_SECONDS: "360"     # 待機6分＋取得約4分 ≒ 実質10分間隔
     steps:
@@ -52,8 +54,8 @@ jobs:
             python scripts/fetch_availability.py || echo "fetch failed this cycle"
             # 3) テスト通知（手動起動＋初回のみ）
             if [ "$TEST" = "true" ] && [ "$FIRST" = "1" ]; then
-              printf '%s\n' "これはメール配達テストです。" "" "このメールが h02050d@gmail.com に届いていれば、HV空き検知の本番通知も確実に届きます。" "ダッシュボード: https://h02050d-ship-it.github.io/miracosta-dashboard/" > new_hv_issue.md
-              printf '%s\n' "これはプッシュ配達テストです。届けば本番通知もOK" > ntfy_msg.txt
+              printf '%s\n' "ミラコスタ通知テストです。このLINEが届けば、HV空き検知の本番通知もここに届きます。" "https://h02050d-ship-it.github.io/miracosta-dashboard/" > line_msg.txt
+              printf '%s\n' "@h02050d-ship-it 通知テスト（記録用Issue）" > new_hv_issue.md
             fi
             # 4) dataブランチへ公開（Pagesは再ビルドされない）
             SHA=$(gh api "repos/$REPO/contents/availability.json?ref=data" --jq .sha 2>/dev/null || true)
@@ -61,25 +63,20 @@ jobs:
               -f message="update availability" -f branch=data \
               -f content="$(base64 -w0 availability.json)" \
               ${SHA:+-f sha=$SHA} > /dev/null && echo "published" || echo "publish failed"
-            # 5a) 新規HV → スマホプッシュ通知（ntfy・確実に届く本命）
-            if [ -s ntfy_msg.txt ] && [ -n "$NTFY_TOPIC" ]; then
-              curl -s \
-                -H "Title: 🌟 ミラコスタ ハーバービュー空き！" \
-                -H "Priority: urgent" \
-                -H "Tags: star,hotel" \
-                -H "Click: https://h02050d-ship-it.github.io/miracosta-dashboard/" \
-                --data-binary @ntfy_msg.txt \
-                "https://ntfy.sh/$NTFY_TOPIC" > /dev/null && echo "ntfy push sent"
-              rm -f ntfy_msg.txt
+            # 5a) 新規HV → LINE通知（本命）
+            if [ -s line_msg.txt ] && [ -n "$LINE_TOKEN" ] && [ -n "$LINE_USER_ID" ]; then
+              PAYLOAD=$(jq -n --arg to "$LINE_USER_ID" --rawfile t line_msg.txt \
+                '{to:$to,messages:[{type:"text",text:$t}]}')
+              curl -s -o /dev/null -w "line:%{http_code}\n" -X POST https://api.line.me/v2/bot/message/push \
+                -H "Authorization: Bearer $LINE_TOKEN" -H "Content-Type: application/json" \
+                --data "$PAYLOAD"
+              rm -f line_msg.txt
             fi
-            # 5b) 新規HV → メール送信（Gmail SMTP・本命）
+            # 5b) 新規HV → 記録用にIssueも残す
             if [ -s new_hv_issue.md ]; then
-              python scripts/send_mail.py new_hv_issue.md "🌟 ミラコスタ ハーバービュー空き検知！" && echo "mail step done"
-              # 記録用にIssueも残す（メール保険）
               gh issue create --repo "$REPO" \
                 --title "🌟 ミラコスタ ハーバービュー空き検知！" \
-                --assignee h02050d-ship-it \
-                --body-file new_hv_issue.md && echo "issue created"
+                --body-file new_hv_issue.md >/dev/null && echo "issue created"
               rm -f new_hv_issue.md
             fi
             FIRST=0

@@ -126,6 +126,17 @@ def main():
             labels.append(f"{d.month}/{d.day}({DOW[d.weekday()]})")
         with open("ntfy_msg.txt", "w", encoding="utf-8") as f:
             f.write("HV空き: " + " ".join(labels) + "\nタップで予約画面へ")
+        # LINE用メッセージ（日付＋キャンセル料状況＋予約リンク）
+        lmsg = ["🌟 ミラコスタ ハーバービュー空き！", ""]
+        for ds in sorted(new_hv):
+            d = date(int(ds[:4]), int(ds[4:6]), int(ds[6:8]))
+            note = "無料キャンセル期間" if (d - date.today()).days >= 15 else "キャンセル料あり期間"
+            lmsg.append(f"■ {d.month}/{d.day}({DOW[d.weekday()]}) [{note}]")
+            lmsg.append(official_url(ds))
+        lmsg.append("")
+        lmsg.append("📊 一覧 https://h02050d-ship-it.github.io/miracosta-dashboard/")
+        with open("line_msg.txt", "w", encoding="utf-8") as f:
+            f.write("\n".join(lmsg))
         print("NEW HV:", ",".join(sorted(new_hv)))
 
     n_avail = sum(1 for v in out["days"].values() if v["a"])
