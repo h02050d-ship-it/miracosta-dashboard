@@ -107,7 +107,7 @@ def main():
     new_hv = [k for k, v in out["days"].items()
               if v["hv"] and not (old.get(k) or {}).get("hv")]
     if new_hv:
-        lines = ["ハーバービューに**新しい空き**が出ました（楽天トラベル在庫）。", ""]
+        lines = ["@h02050d-ship-it ハーバービューに**新しい空き**が出ました（楽天トラベル在庫）。", ""]
         for ds in sorted(new_hv):
             d = date(int(ds[:4]), int(ds[4:6]), int(ds[6:8]))
             rooms = " / ".join(n for n in out["days"][ds]["r"] if "ハーバー" in n)

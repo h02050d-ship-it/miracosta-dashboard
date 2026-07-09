@@ -49,7 +49,7 @@ jobs:
             python scripts/fetch_availability.py || echo "fetch failed this cycle"
             # 3) テスト通知（手動起動＋初回のみ）
             if [ "$TEST" = "true" ] && [ "$FIRST" = "1" ]; then
-              printf '%s\n' "これは**メール配達テスト**です（ボット作成）。" "" "このメールが届いていれば、HV空き検知の本番通知もOKです。" > new_hv_issue.md
+              printf '%s\n' "@h02050d-ship-it これは**メール配達テスト**です（ボット作成）。" "" "このメールが届いていれば、HV空き検知の本番通知もOKです。" > new_hv_issue.md
             fi
             # 4) dataブランチへ公開（Pagesは再ビルドされない）
             SHA=$(gh api "repos/$REPO/contents/availability.json?ref=data" --jq .sha 2>/dev/null || true)
@@ -57,10 +57,11 @@ jobs:
               -f message="update availability" -f branch=data \
               -f content="$(base64 -w0 availability.json)" \
               ${SHA:+-f sha=$SHA} > /dev/null && echo "published" || echo "publish failed"
-            # 5) 新規HV → Issue作成（GitHubがメール送信）
+            # 5) 新規HV → Issue作成（本人にassign＋mentionでメール確実化）
             if [ -s new_hv_issue.md ]; then
               gh issue create --repo "$REPO" \
                 --title "🌟 ミラコスタ ハーバービュー空き検知！" \
+                --assignee h02050d-ship-it \
                 --body-file new_hv_issue.md && echo "issue created (email sent)"
               rm -f new_hv_issue.md
             fi
