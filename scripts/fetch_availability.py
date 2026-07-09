@@ -119,6 +119,13 @@ def main():
         lines.append("[📊 ダッシュボードを開く](https://h02050d-ship-it.github.io/miracosta-dashboard/)")
         with open("new_hv_issue.md", "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
+        # ntfy用の短いプッシュ本文（日付だけ列挙）
+        labels = []
+        for ds in sorted(new_hv):
+            d = date(int(ds[:4]), int(ds[4:6]), int(ds[6:8]))
+            labels.append(f"{d.month}/{d.day}({DOW[d.weekday()]})")
+        with open("ntfy_msg.txt", "w", encoding="utf-8") as f:
+            f.write("HV空き: " + " ".join(labels) + "\nタップで予約画面へ")
         print("NEW HV:", ",".join(sorted(new_hv)))
 
     n_avail = sum(1 for v in out["days"].values() if v["a"])

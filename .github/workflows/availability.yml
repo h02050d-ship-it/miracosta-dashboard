@@ -28,6 +28,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
+      NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
       REPO: h02050d-ship-it/miracosta-dashboard
       LOOP_SECONDS: "360"     # 待機6分＋取得約4分 ≒ 実質10分間隔
     steps:
@@ -49,7 +50,8 @@ jobs:
             python scripts/fetch_availability.py || echo "fetch failed this cycle"
             # 3) テスト通知（手動起動＋初回のみ）
             if [ "$TEST" = "true" ] && [ "$FIRST" = "1" ]; then
-              printf '%s\n' "@h02050d-ship-it これは**メール配達テスト**です（ボット作成）。" "" "このメールが届いていれば、HV空き検知の本番通知もOKです。" > new_hv_issue.md
+              printf '%s\n' "@h02050d-ship-it これはメール配達テストです（ボット作成）。" > new_hv_issue.md
+              printf '%s\n' "これはプッシュ配達テストです。届けば本番通知もOK" > ntfy_msg.txt
             fi
             # 4) dataブランチへ公開（Pagesは再ビルドされない）
             SHA=$(gh api "repos/$REPO/contents/availability.json?ref=data" --jq .sha 2>/dev/null || true)
@@ -57,12 +59,23 @@ jobs:
               -f message="update availability" -f branch=data \
               -f content="$(base64 -w0 availability.json)" \
               ${SHA:+-f sha=$SHA} > /dev/null && echo "published" || echo "publish failed"
-            # 5) 新規HV → Issue作成（本人にassign＋mentionでメール確実化）
+            # 5a) 新規HV → スマホプッシュ通知（ntfy・確実に届く本命）
+            if [ -s ntfy_msg.txt ] && [ -n "$NTFY_TOPIC" ]; then
+              curl -s \
+                -H "Title: 🌟 ミラコスタ ハーバービュー空き！" \
+                -H "Priority: urgent" \
+                -H "Tags: star,hotel" \
+                -H "Click: https://h02050d-ship-it.github.io/miracosta-dashboard/" \
+                --data-binary @ntfy_msg.txt \
+                "https://ntfy.sh/$NTFY_TOPIC" > /dev/null && echo "ntfy push sent"
+              rm -f ntfy_msg.txt
+            fi
+            # 5b) 新規HV → Issue作成（記録＋メール保険）
             if [ -s new_hv_issue.md ]; then
               gh issue create --repo "$REPO" \
                 --title "🌟 ミラコスタ ハーバービュー空き検知！" \
                 --assignee h02050d-ship-it \
-                --body-file new_hv_issue.md && echo "issue created (email sent)"
+                --body-file new_hv_issue.md && echo "issue created"
               rm -f new_hv_issue.md
             fi
             FIRST=0
