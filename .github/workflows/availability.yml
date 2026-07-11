@@ -34,13 +34,13 @@ jobs:
       LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
       LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
       REPO: h02050d-ship-it/miracosta-dashboard
-      LOOP_SECONDS: "180"     # 待機3分＋取得約4分 ≒ 約7分間隔
+      LOOP_SECONDS: "90"      # 待機90秒+取得約2.5分 = 約4分間隔(9月以降に絞り高頻度化)
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: 約7分ごとの見張りループ
+      - name: 約4分ごとの見張りループ
         run: |
           set +e
           TEST="${{ inputs.test_notify }}"

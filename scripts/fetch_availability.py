@@ -10,6 +10,8 @@ APP_ID = "d324ea0a-e3b3-47f3-a8db-e9c581169b56"  # 公開前提のアプリID
 KEY = os.environ.get("RAKUTEN_ACCESS_KEY", "").strip()
 HOTEL_NO = "74733"
 DAYS_AHEAD = 150          # 今日から何日先までチェックするか（解禁は約4ヶ月前）
+# 本番は9月以降狙い → 開始日を指定して7・8月をスキップ（対象日を減らし頻度を上げる）
+START_DATE = os.environ.get("START_DATE", "2026-09-01").strip()
 SLEEP = 1.2               # リクエスト間隔（秒）礼儀
 ORIGIN = "https://h02050d-ship-it.github.io"
 REFERER = "https://h02050d-ship-it.github.io/miracosta-dashboard/"
@@ -87,11 +89,20 @@ def main():
     except Exception:
         pass
 
+    try:
+        start = date(int(START_DATE[:4]), int(START_DATE[5:7]), int(START_DATE[8:10]))
+    except Exception:
+        start = today
+    if start < today:
+        start = today
     out = {"updated": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()),
            "source": "Rakuten Travel VacantHotelSearch (hotelNo=74733, adultNum=2)",
+           "start": start.strftime("%Y%m%d"),
            "days": {}}
     for i in range(DAYS_AHEAD):
         day = today + timedelta(days=i)
+        if day < start:      # 9月以降だけ対象（7・8月はスキップ）
+            continue
         r = fetch(day)
         hv = any(("ハーバー" in nm) for nm in r["rooms"])
         out["days"][day.strftime("%Y%m%d")] = {
